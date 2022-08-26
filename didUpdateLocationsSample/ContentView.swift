@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var viewModel = AppDelegate()
+    @ObservedObject var viewModel = LocationManager()
     var body: some View {
         VStack {
             Text("緯度: \(viewModel.latitude)")
@@ -21,21 +21,27 @@ import SwiftUI
 import CoreLocation
 
 
-class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate,ObservableObject {
+class LocationManager: NSObject, CLLocationManagerDelegate,ObservableObject {
     
     @Published var latitude = 0.0
     @Published var longitude = 0.0
     
     var locationManager : CLLocationManager?
     
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        
+    override init() {
+        super.init()
         locationManager = CLLocationManager()
         locationManager!.delegate = self
         
         locationManager!.requestWhenInUseAuthorization()
+        
 
-        if CLLocationManager.locationServicesEnabled() {
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        switch status {
+        case .authorizedAlways, .authorizedWhenInUse:
             locationManager!.desiredAccuracy = kCLLocationAccuracyBest
             // 更新に必要な最小移動距離
             locationManager!.distanceFilter = 10
@@ -43,9 +49,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, CLLocationManagerDelegate
             locationManager!.activityType = .fitness
             // 位置情報取得開始
             locationManager!.startUpdatingLocation()
+        case .notDetermined, .denied, .restricted:
+            // ...
+            break
+        default:
+            // ...
+            break
         }
-        
-        return true
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
